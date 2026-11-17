@@ -1,0 +1,58 @@
+services:
+  frontend:
+    build:
+      context: ../biztrips-frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_IMGS: items
+    container_name: biztrips-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ../biztrips-backend
+    container_name: biztrips-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://database:3306/db_biztrips
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    image: mariadb:latest
+    container_name: biztrips-database
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: db_biztrips
+    ports:
+      - "3306:3306"
+    volumes:
+      - database-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: biztrips-phpmyadmin
+    depends_on:
+      - database
+    ports:
+      - "8082:80"
+    environment:
+      PMA_HOST: database
+
+volumes:
+  database-data:
+  uploads:
